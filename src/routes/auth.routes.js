@@ -9,6 +9,9 @@ router.post("/login", authController.login);
 // src/routes/auth.routes.js
 router.post("/logout", authMiddleware, authController.logout);
 
+// Public signup (no auth required)
+router.post("/signup", authController.signup);
+
 router.post(
   "/register",
   authMiddleware,

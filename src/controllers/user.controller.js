@@ -132,3 +132,92 @@ exports.resetPassword = async (req, res) => {
     res.status(500).json({ message: "Server error" });
   }
 };
+
+// 8️⃣ Get Pending Users (Admin/HR only)
+exports.getPendingUsers = async (req, res) => {
+  try {
+    const pendingUsers = await User.find({ approvalStatus: 'PENDING' })
+      .populate("role", "name")
+      .select("-password")
+      .sort({ createdAt: -1 }); // Newest first
+
+    res.json(pendingUsers);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// 9️⃣ Approve User (Admin/HR only)
+exports.approveUser = async (req, res) => {
+  try {
+    const Employee = require("../models/Employee");
+
+    const user = await User.findById(req.params.id).populate("role", "name");
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (user.approvalStatus !== 'PENDING') {
+      return res.status(400).json({
+        message: `User is already ${user.approvalStatus.toLowerCase()}`
+      });
+    }
+
+    // Update approval status
+    user.approvalStatus = 'APPROVED';
+    user.approvedBy = req.user.id; // From auth middleware
+    user.approvedAt = new Date();
+    await user.save();
+
+    // Create Employee record
+    const department = user.role.name === 'ADMIN' ? 'Administration' :
+      user.role.name === 'HR' ? 'Human Resources' :
+        'General';
+
+    await Employee.create({
+      name: user.name,
+      email: user.email,
+      status: 'Active',
+      department,
+      joiningDate: new Date()
+    });
+
+    res.json({
+      message: "User approved successfully and Employee record created",
+      user
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+// 🔟 Reject User (Admin/HR only)
+exports.rejectUser = async (req, res) => {
+  try {
+    const { reason } = req.body;
+
+    const user = await User.findById(req.params.id);
+    if (!user) return res.status(404).json({ message: "User not found" });
+
+    if (user.approvalStatus !== 'PENDING') {
+      return res.status(400).json({
+        message: `User is already ${user.approvalStatus.toLowerCase()}`
+      });
+    }
+
+    // Update approval status
+    user.approvalStatus = 'REJECTED';
+    user.approvedBy = req.user.id;
+    user.approvedAt = new Date();
+    if (reason) user.rejectionReason = reason;
+    await user.save();
+
+    res.json({
+      message: "User rejected successfully",
+      user
+    });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Server error" });
+  }
+};

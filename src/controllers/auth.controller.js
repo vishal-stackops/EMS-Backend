@@ -48,7 +48,22 @@ exports.login = async (req, res) => {
       });
     }
 
-    // 4️⃣ Create Access Token
+    // 4️⃣ Check approval status
+    if (user.approvalStatus === 'PENDING') {
+      return res.status(403).json({
+        message: "Your account is pending admin approval. Please wait for approval before logging in.",
+        approvalStatus: 'PENDING'
+      });
+    }
+
+    if (user.approvalStatus === 'REJECTED') {
+      return res.status(403).json({
+        message: user.rejectionReason || "Your account registration has been rejected. Please contact support.",
+        approvalStatus: 'REJECTED'
+      });
+    }
+
+    // 5️⃣ Create Access Token
     const accessToken = generateAccessToken(user);
 
     // 5️⃣ Create Refresh Token
@@ -77,6 +92,66 @@ exports.login = async (req, res) => {
     });
   } catch (error) {
     console.error("Login Error:", error);
+    return res.status(500).json({
+      message: "Server error",
+    });
+  }
+};
+
+
+// Public Signup (no auth required)
+exports.signup = async (req, res) => {
+  try {
+    const { name, email, password } = req.body;
+
+    // Validate input
+    if (!name || !email || !password) {
+      return res.status(400).json({
+        message: "All fields are required",
+      });
+    }
+
+    // Check if email already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(409).json({
+        message: "Email already registered",
+      });
+    }
+
+    // Find EMPLOYEE role
+    const role = await Role.findOne({ name: "EMPLOYEE" });
+    if (!role) {
+      return res.status(404).json({
+        message: "Employee role not found",
+      });
+    }
+
+    // Hash password
+    const salt = await bcrypt.genSalt(10);
+    const hashedPassword = await bcrypt.hash(password, salt);
+
+    // Create user with PENDING approval status
+    const newUser = await User.create({
+      name,
+      email,
+      password: hashedPassword,
+      role: role._id,
+      approvalStatus: 'PENDING', // Default, but explicit
+    });
+
+    // Do NOT create Employee record yet - wait for admin approval
+
+    return res.status(201).json({
+      message: "Registration successful! Please wait for admin approval before logging in.",
+      user: {
+        id: newUser._id,
+        name: newUser.name,
+        email: newUser.email,
+      },
+    });
+  } catch (error) {
+    console.error("Signup Error:", error);
     return res.status(500).json({
       message: "Server error",
     });
@@ -115,12 +190,13 @@ exports.register = async (req, res) => {
     const salt = await bcrypt.genSalt(10);
     const hashedPassword = await bcrypt.hash(password, salt);
 
-    // 5️⃣ Save user
+    // 5️⃣ Save user (admin-created users are auto-approved)
     const newUser = await User.create({
       name,
       email,
       password: hashedPassword,
       role: role._id,
+      approvalStatus: 'APPROVED', // Admin-created users are pre-approved
     });
 
     // 6️⃣ Automatically create Employee record

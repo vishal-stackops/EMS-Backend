@@ -29,4 +29,9 @@ router.patch("/:id/role", roleMiddleware(["ADMIN"]), userController.assignRole);
 // Reset user password (Admin / HR)
 router.patch("/:id/reset-password", roleMiddleware(["ADMIN", "HR"]), userController.resetPassword);
 
+// Pending user management (Admin / HR)
+router.get("/pending", roleMiddleware(["ADMIN", "HR"]), userController.getPendingUsers);
+router.put("/:id/approve", roleMiddleware(["ADMIN", "HR"]), userController.approveUser);
+router.put("/:id/reject", roleMiddleware(["ADMIN", "HR"]), userController.rejectUser);
+
 module.exports = router;

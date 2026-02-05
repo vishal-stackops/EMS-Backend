@@ -13,8 +13,23 @@ const userSchema = new mongoose.Schema(
 
     isActive: { type: Boolean, default: true },
 
+    approvalStatus: {
+      type: String,
+      enum: ['PENDING', 'APPROVED', 'REJECTED'],
+      default: 'PENDING'
+    },
+
+    approvedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User'
+    },
+
+    approvedAt: Date,
+
+    rejectionReason: String,
+
     resetPasswordToken: String,
-    
+
     resetPasswordExpire: Date,
 
   },
