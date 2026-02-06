@@ -14,6 +14,11 @@ router.post("/", roleMiddleware(["ADMIN", "HR"]), userController.createUser);
 // Get all users (Admin / HR)
 router.get("/", roleMiddleware(["ADMIN", "HR"]), userController.getAllUsers);
 
+// Pending user management (Admin / HR) - MUST be before /:id routes
+router.get("/pending", roleMiddleware(["ADMIN", "HR"]), userController.getPendingUsers);
+router.put("/:id/approve", roleMiddleware(["ADMIN", "HR"]), userController.approveUser);
+router.put("/:id/reject", roleMiddleware(["ADMIN", "HR"]), userController.rejectUser);
+
 // Get user by ID (Admin / HR / Employee can view self)
 router.get("/:id", userController.getUserById);
 
@@ -28,10 +33,5 @@ router.patch("/:id/role", roleMiddleware(["ADMIN"]), userController.assignRole);
 
 // Reset user password (Admin / HR)
 router.patch("/:id/reset-password", roleMiddleware(["ADMIN", "HR"]), userController.resetPassword);
-
-// Pending user management (Admin / HR)
-router.get("/pending", roleMiddleware(["ADMIN", "HR"]), userController.getPendingUsers);
-router.put("/:id/approve", roleMiddleware(["ADMIN", "HR"]), userController.approveUser);
-router.put("/:id/reject", roleMiddleware(["ADMIN", "HR"]), userController.rejectUser);
 
 module.exports = router;
