@@ -48,19 +48,24 @@ exports.login = async (req, res) => {
       });
     }
 
-    // 4️⃣ Check approval status
-    if (user.approvalStatus === 'PENDING') {
-      return res.status(403).json({
-        message: "Your account is pending admin approval. Please wait for approval before logging in.",
-        approvalStatus: 'PENDING'
-      });
-    }
+    // 4️⃣ Check approval status (only for EMPLOYEE role)
+    const userRole = user.role?.name || user.role;
 
-    if (user.approvalStatus === 'REJECTED') {
-      return res.status(403).json({
-        message: user.rejectionReason || "Your account registration has been rejected. Please contact support.",
-        approvalStatus: 'REJECTED'
-      });
+    // Skip approval check for ADMIN and HR users
+    if (userRole !== 'ADMIN' && userRole !== 'HR') {
+      if (user.approvalStatus === 'PENDING') {
+        return res.status(403).json({
+          message: "Your account is pending admin approval. Please wait for approval before logging in.",
+          approvalStatus: 'PENDING'
+        });
+      }
+
+      if (user.approvalStatus === 'REJECTED') {
+        return res.status(403).json({
+          message: user.rejectionReason || "Your account registration has been rejected. Please contact support.",
+          approvalStatus: 'REJECTED'
+        });
+      }
     }
 
     // 5️⃣ Create Access Token
